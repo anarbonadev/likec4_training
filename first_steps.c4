@@ -1,0 +1,85 @@
+// Especificación: definimos los elementos que vamos a usar en nuestros diagramas.
+specification {
+    element actor       // User [Person]
+    element system      // Software System
+    element component   // Componentes
+}
+
+// Modelo
+model {
+    customer = actor 'Customer' {
+        description 'Our dear customer'
+        style {
+            shape person
+        }
+    }
+    stripe = system 'Stripe'
+    saas = system 'Our SaaS' {
+        // System tiene componentes
+        component ui {
+            description 'Nextjs application, hosted in Vercel'
+            style {
+                icon tech:nextjs
+                shape browser
+            }
+        }
+        component backend {
+            description '
+                Implements business logic
+                as exposes as REST API
+            '
+        }
+
+        component database {
+            description 'It is the database of the system'
+            style {
+                icon tech:postgresql
+                shape storage
+            }
+
+            component customers
+            component orders
+        }
+
+        // UI fetches data from de backend
+        ui -> backend 'fetches via HTTPS'
+
+        backend -> database 'read data from'
+
+        backend -> stripe 'Send data to Stripe'
+    }
+
+    // El customer utilizar el UI
+    customer -> ui 'opens in browser'
+    customer -> saas 'enjoys our product'
+    saas -> stripe 'send data to stripe'
+}
+
+// Vistas. Con ellas podemos rederizar el modelo
+views {
+    // Esta vista define el nivel 1 de C4 Model - CONTEXT
+    view index {
+        include *
+
+        style stripe {
+            color muted
+        }
+    }
+
+    // Esta vista define el nivel 2 de C4 Model para 
+    view of saas {
+        include *
+
+        style customer{
+            color muted
+        }
+
+        style stripe{
+            color muted
+        }
+    }
+
+    view of database {
+        include *
+    }
+}
