@@ -1,20 +1,64 @@
-// Especificación: definimos los elementos que vamos a usar en nuestros diagramas.
+
+// Especificación: define los tipos de elementos que se van a usar en el modelo.
 specification {
-    element actor       // User [Person]
+
+    /*
+        ***** ELEMENTOS ******************************
+    */
+
+    // User [Person]
+    element actor {
+        style {
+            color muted
+        }
+    }
     element system      // Software System
+    element apache_camel {
+        technology 'Apache Camel'
+    }
+    element web_service {
+        technology 'Java Springboot'
+    }
+    element postgre_db {
+        technology 'Postgre SQL'
+    }
     element component   // Componentes
+
+
+/*
+    ***** TAGS ***********************************
+*/
+
+    tag deprecated
+    tag epic-123
+    tag team2
+
+
+/*
+    ***** TIPOS DE RELACIONES ********************
+*/
+
+    relationship async
+    relationship uses
 }
 
-// Modelo
+// Predicados compartidos globalmente.
+global {
+
+}
+
+// Modelo: elementos de la arquitectura, jerarquía, composición y relaciones.
 model {
-    customer = actor 'Customer' {
-        description 'Our dear customer'
+    customer = actor 'Staff' {
+        description 'Sprinter Staff'
         style {
             shape person
         }
     }
-    stripe = system 'Stripe'
-    saas = system 'Our SaaS' {
+
+    // Structurizr DSL style:
+    // <name> = softwareSystem [title] [description] [technology]
+    saas = system 'Edicom Integration System' 'Sistema de integración con Edicom' 'Java' {
         // System tiene componentes
         component ui {
             description 'Nextjs application, hosted in Vercel'
@@ -23,15 +67,55 @@ model {
                 shape browser
             }
         }
-        component backend {
+        apache_camel ac_orders {
+            title 'ISRG Apache ORDERS'
             description '
-                Implements business logic
-                as exposes as REST API
+                Recupera los pedidos pendientes de enviar,
+                transforma al formato Edicom
             '
         }
+        apache_camel desadv {
+            title 'ISRG Apache DESADV'
+            description '
+                Descarga los nuevos albaranes y los envía
+                a la API ISRG Edidoc
+            '
+        }
+        apache_camel invoice {
+            title 'ISRG Apache INVOICE'
+            description '
+                Descarga las nuevas facturas y los envía
+                a la API ISRG Edidoc
+            '
+        }
+        apache_camel pricat {
+            title 'ISRG Apache PRICAT'
+            description '
+                Descarga los nuevos PRICAT y los envía
+                a la API ISRG Edidoc
+            '
+        }
+        web_service isrg_edidoc {
+            title 'ISRG Edidoc'
+            description '
+                Actua como fachada de la base
+                de datos ISRG Edicom DB
+            '
+            metadata {
+                prop1 'valor1'
+                prop2 '
+                    apiVersion: apps/v1
+                    kind: StatefulSet
+                    metadata:
+                        name: app-statefulset
+                    spec: {}
+                '
+            }
+        }
 
-        component database {
-            description 'It is the database of the system'
+        postgre_db isrg_edidoc_db {
+            title 'ISRG Edicom DB'
+            description 'It is the isrg_edidoc_db of the system'
             style {
                 icon tech:postgresql
                 shape storage
@@ -41,18 +125,43 @@ model {
             component orders
         }
 
-        // UI fetches data from de backend
-        ui -> backend 'fetches via HTTPS'
+        // UI fetches data from de isrg_edidoc
+        ui -> isrg_edidoc 'fetches via HTTPS' {
+            technology 'HTTPS'
+        }
 
-        backend -> database 'read data from'
+        isrg_edidoc .uses isrg_edidoc_db 'write data to'
 
-        backend -> stripe 'Send data to Stripe'
+        isrg_edidoc_db -> isrg_edidoc 'read data from'
+
+        ac_orders -> edicom_system 'send orders to' {
+            technology 'HTTPS'
+        }
+        ac_orders -> isrg_edidoc 'get orders from'
+
+        desadv -> edicom_system 'get desadv from'
+        desadv -> isrg_edidoc 'send desadv to'
+
+        invoice -> edicom_system 'get invoice from'
+        invoice -> isrg_edidoc 'send invoice to'
+
+        pricat -> edicom_system 'get pricat from'
+        pricat -> isrg_edidoc 'send pricat to'
+
+    }
+
+    // Sistemas externos
+    edicom_system = system 'Edicom' {
+        // External link
+        link https://ediwin02.edicomgroup.com/login
     }
 
     // El customer utilizar el UI
     customer -> ui 'opens in browser'
     customer -> saas 'enjoys our product'
-    saas -> stripe 'send data to stripe'
+    saas -> edicom_system 'send data to Edicom' {
+        navigateTo saas
+    }
 }
 
 // Vistas. Con ellas podemos rederizar el modelo
@@ -61,7 +170,7 @@ views {
     view index {
         include *
 
-        style stripe {
+        style edicom_system {
             color muted
         }
     }
@@ -74,12 +183,13 @@ views {
             color muted
         }
 
-        style stripe{
+        style edicom_system {
             color muted
         }
+        autoLayout RightLeft
     }
 
-    view of database {
+    view of isrg_edidoc_db {
         include *
     }
 }
